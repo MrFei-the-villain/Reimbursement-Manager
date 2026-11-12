@@ -238,6 +238,16 @@ fn edit_receipt(state: tauri::State<AppState>, row: u32, patch: Value) -> Result
 }
 
 #[tauri::command]
+fn delete_receipt(state: tauri::State<AppState>, row: u32) -> Result<(), String> {
+    state.store.delete_row(row).map_err(|e| match e {
+        StoreError::FileLocked(_) => {
+            "receipts.xlsx is open in Excel — close it and retry".to_string()
+        }
+        other => other.to_string(),
+    })
+}
+
+#[tauri::command]
 fn open_portal(state: tauri::State<AppState>) -> Result<Value, String> {
     let url = state.cfg.read().unwrap().reimbursement_url.trim().to_string();
     if !(url.to_lowercase().starts_with("http://")
@@ -323,6 +333,7 @@ pub fn run() {
             add_path,
             upload_image,
             edit_receipt,
+            delete_receipt,
             open_portal,
             scan_now
         ])
