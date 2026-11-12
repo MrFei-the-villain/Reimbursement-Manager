@@ -1,0 +1,160 @@
+:root {
+  --bg: #f4f6fa;
+  --panel: #ffffff;
+  --border: #e2e8f0;
+  --text: #1e293b;
+  --muted: #64748b;
+  --accent: #2563eb;
+  --accent-dark: #1d4ed8;
+  --warn-bg: #fff1f0;
+  --warn-text: #b91c1c;
+  --ok: #16a34a;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 10px 20px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+.brand { display: flex; align-items: center; gap: 10px; color: var(--accent); }
+.brand h1 { font-size: 16px; color: var(--text); font-weight: 600; }
+nav { display: flex; gap: 4px; flex: 1; }
+.tab {
+  border: none; background: none; padding: 8px 16px; font-size: 14px;
+  color: var(--muted); cursor: pointer; border-radius: 8px;
+}
+.tab:hover { background: var(--bg); }
+.tab.active { background: var(--accent); color: #fff; }
+.badge {
+  font-size: 12px; padding: 4px 12px; border-radius: 999px;
+  background: var(--bg); color: var(--muted); border: 1px solid var(--border);
+}
+.badge.ok { background: #ecfdf5; color: var(--ok); border-color: #bbf7d0; }
+.badge.err { background: var(--warn-bg); color: var(--warn-text); border-color: #fecaca; }
+
+.summary {
+  display: flex; gap: 12px; padding: 12px 20px;
+  background: var(--panel); border-bottom: 1px solid var(--border);
+}
+.stat {
+  flex: 0 0 auto; min-width: 110px; background: var(--bg);
+  border: 1px solid var(--border); border-radius: 10px; padding: 8px 14px;
+}
+.stat span { font-size: 18px; font-weight: 700; display: block; }
+.stat label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.stat.warn span { color: var(--warn-text); }
+
+main { flex: 1; overflow: hidden; padding: 16px 20px; }
+.tab-panel { display: none; height: 100%; flex-direction: column; gap: 14px; }
+.tab-panel.active { display: flex; }
+
+#tab-receipts { overflow: hidden; }
+
+#dropzone {
+  border: 2px dashed #c3d0e4; border-radius: 12px; background: var(--panel);
+  padding: 14px; text-align: center; color: var(--muted); flex: 0 0 auto;
+  transition: border-color 0.15s, background 0.15s;
+}
+#dropzone.drag { border-color: var(--accent); background: #eff6ff; color: var(--accent); }
+#dropzone strong { color: var(--text); }
+#dropzone .filelink { color: var(--accent); cursor: pointer; text-decoration: underline; }
+#dropzone .hint { font-size: 12px; }
+
+.table-wrap {
+  flex: 1; overflow: auto; background: var(--panel);
+  border: 1px solid var(--border); border-radius: 12px;
+}
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { padding: 7px 10px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+th {
+  position: sticky; top: 0; background: #f8fafc; font-size: 11px;
+  text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted);
+  border-bottom: 2px solid var(--border);
+}
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+tr.review td { background: var(--warn-bg); }
+tr.review td:first-child { box-shadow: inset 3px 0 0 #ef4444; }
+td.empty { text-align: center; color: var(--muted); padding: 30px; }
+
+/* inline-editable receipt cells */
+input.cell {
+  width: 100%; border: 1px solid transparent; background: transparent;
+  padding: 4px 6px; border-radius: 6px; font-size: 13px; color: var(--text);
+  font-family: inherit;
+}
+input.cell:hover { border-color: var(--border); background: var(--panel); }
+input.cell:focus { outline: none; border-color: var(--accent); background: var(--panel); }
+td.num input.cell { text-align: right; font-variant-numeric: tabular-nums; }
+input.cell-cur { max-width: 70px; text-transform: uppercase; }
+input.cell-amt { max-width: 110px; }
+
+.save-bar {
+  display: flex; align-items: center; gap: 12px; flex: 0 0 auto;
+}
+.save-bar .spacer { flex: 1; }
+#open-portal {
+  border: 1px solid var(--border); background: var(--panel); border-radius: 8px;
+  padding: 6px 14px; font-size: 13px; cursor: pointer; color: var(--accent);
+}
+#open-portal:hover { background: #eff6ff; }
+.save-bar .hint { font-size: 12px; color: var(--muted); }
+#save-changes { padding: 6px 16px; font-size: 13px; align-self: center; }
+#save-changes.hidden { display: none; }
+#save-msg { font-size: 13px; }
+
+/* stats */
+.stats-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+  overflow: auto; padding-right: 4px;
+}
+.card {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 12px; padding: 14px 16px;
+}
+.card.wide { grid-column: 1 / -1; }
+.card h3 { font-size: 13px; margin-bottom: 10px; color: var(--muted); }
+table.mini { font-size: 13px; }
+table.mini th { position: static; background: none; border-bottom: 1px solid var(--border); }
+table.mini td { border-bottom: none; }
+#monthly-chart svg, #places-chart svg { width: 100%; height: auto; }
+
+/* settings */
+#tab-settings { overflow: auto; }
+#settings-form { max-width: 560px; display: flex; flex-direction: column; gap: 14px; }
+.field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+.field label { font-size: 12px; color: var(--muted); }
+.field label.check { flex-direction: row; align-items: center; gap: 8px; font-size: 14px; color: var(--text); }
+.field input[type=text], .field input[type=password], .field select {
+  padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px;
+}
+.field input:focus { outline: 2px solid #bfdbfe; border-color: var(--accent); }
+.row { display: flex; gap: 10px; }
+.row .field { flex: 1; }
+.row.right { justify-content: flex-end; gap: 8px; margin-top: 12px; }
+button.primary {
+  background: var(--accent); color: #fff; border: none; border-radius: 8px;
+  padding: 9px 22px; font-size: 14px; cursor: pointer; align-self: flex-start;
+}
+button.primary:hover { background: var(--accent-dark); }
+#settings-msg { font-size: 13px; color: var(--ok); align-self: center; }
+
+footer {
+  border-top: 1px solid var(--border); background: var(--panel);
+  padding: 5px 20px; height: 74px; overflow: hidden;
+}
+#activity { font-family: Consolas, monospace; font-size: 11px; color: var(--muted); line-height: 1.5; }
