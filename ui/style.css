@@ -103,6 +103,15 @@ td.num input.cell { text-align: right; font-variant-numeric: tabular-nums; }
 input.cell-cur { max-width: 70px; text-transform: uppercase; }
 input.cell-amt { max-width: 110px; }
 
+/* per-row delete button */
+td.row-actions { width: 34px; text-align: center; padding: 4px 6px; }
+.del-btn {
+  border: none; background: transparent; color: var(--muted);
+  font-size: 15px; line-height: 1; cursor: pointer;
+  width: 24px; height: 24px; border-radius: 6px; padding: 0;
+}
+.del-btn:hover { background: var(--warn-bg); color: var(--warn-text); }
+
 .save-bar {
   display: flex; align-items: center; gap: 12px; flex: 0 0 auto;
 }
