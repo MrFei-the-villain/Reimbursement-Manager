@@ -1,0 +1,33 @@
+[package]
+name = "reimbursement-manager"
+version = "1.1.0"
+description = "Reimbursement Manager — receipts to Excel via OCR"
+edition = "2021"
+
+[lib]
+name = "reimbursement_manager_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+base64 = "0.23.1"
+calamine = "0.38.0"
+chrono = "0.4.45"
+fancy-regex = "0.20.2"
+image = "0.25.10"
+notify = "8.2.2"
+ocrs = "0.14.0"
+open = "5.4.5"
+reqwest = { version = "0.13.5", features = ["json"] }
+rten = "0.28.0"
+rust_xlsxwriter = "0.102.0"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-single-instance = "2"
+
+[profile.release]
+codegen-units = 1
+lto = true
