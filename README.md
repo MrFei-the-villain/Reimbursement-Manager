@@ -20,10 +20,6 @@ Built with **Tauri (Rust)** for the shell and a bundled **Python (RapidOCR)** ba
 
 Download `Reimbursement Manager_1.0.0_x64-setup.exe` from the `dist` folder (or the v1.0.0 release) and run it.
 
-### Portable
-
-`dist\reimbursement-manager.exe` + the `dist\backend` folder next to it also runs without installing.
-
 ### Using the app
 
 1. Launch the app — it starts the OCR backend automatically
