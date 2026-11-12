@@ -1,0 +1,19 @@
+# Build outputs
+dist/
+src-tauri/target/
+src-tauri/gen/schemas/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Node
+node_modules/
+
+# Local data
+inbox/
+processed/
+errors/
+receipts.xlsx
+config.json
