@@ -280,6 +280,18 @@ impl ExcelStore {
             }
         })
     }
+
+    /// `row` is the 1-based spreadsheet row (header = row 1).
+    pub fn delete_row(&self, row: u32) -> Result<(), StoreError> {
+        self.merge_and_write(|rows| {
+            let idx = (row as usize).checked_sub(2);
+            if let Some(i) = idx {
+                if i < rows.len() {
+                    rows.remove(i);
+                }
+            }
+        })
+    }
 }
 
 fn fmt_amount(f: f64) -> String {
@@ -334,5 +346,26 @@ mod tests {
         store.append(r).unwrap();
         let rows = store.list_rows();
         assert!(rows[0].1.needs_review);
+    }
+
+    #[test]
+    fn delete_row_removes_only_that_row() {
+        let store = tmp_store("delete");
+        let mut a = ReceiptData::empty();
+        a.date = Some("2026-06-01".into());
+        a.merchant = Some("A".into());
+        a.amount = Some(10.0);
+        a.currency = "CNY".into();
+        let mut b = a.clone();
+        b.date = Some("2026-06-02".into());
+        b.merchant = Some("B".into());
+        store.append(a).unwrap();
+        store.append(b).unwrap();
+
+        store.delete_row(2).unwrap(); // first data row (excel row 2)
+        let rows = store.list_rows();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].0, 2); // deleted row renumbers; B now on excel row 2
+        assert_eq!(rows[0].1.merchant.as_deref(), Some("B"));
     }
 }
