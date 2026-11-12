@@ -35,7 +35,7 @@ function renderReceipts() {
   dirtyRows.clear();
   updateSaveBar();
   if (!receipts.length) {
-    tbody.innerHTML = '<tr><td colspan="4" class="empty">No receipts yet — drop an image above</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="empty">No receipts yet — drop an image above</td></tr>';
     return;
   }
   tbody.innerHTML = receipts
@@ -47,6 +47,7 @@ function renderReceipts() {
         <td class="num"><input class="cell cell-amt" data-f="amount" type="number" step="0.01"
             value="${r.amount == null ? "" : r.amount}" /></td>
         <td><input class="cell" data-f="merchant" value="${esc(r.merchant) || ""}" /></td>
+        <td class="row-actions"><button class="del-btn" data-del="${r.row}" title="Delete this receipt">&times;</button></td>
       </tr>`
     )
     .join("");
@@ -58,6 +59,25 @@ function renderReceipts() {
         updateSaveBar();
       }));
   });
+  tbody.querySelectorAll("button.del-btn").forEach((btn) =>
+    btn.addEventListener("click", () => deleteRow(Number(btn.dataset.del))));
+}
+
+async function deleteRow(row) {
+  const target = receipts.find((r) => r.row === row);
+  const label = target ? (target.merchant || target.date || `row ${row}`) : `row ${row}`;
+  if (!confirm(`Delete receipt from "${label}"? This also removes it from receipts.xlsx.`)) return;
+  try {
+    await invoke("delete_receipt", { row });
+    dirtyRows.delete(row);
+    updateSaveBar();
+  } catch (e) {
+    const msg = document.getElementById("save-msg");
+    msg.textContent = String(e) || "Delete failed";
+    msg.style.color = "var(--warn-text)";
+    setTimeout(() => (msg.textContent = ""), 4000);
+  }
+  await loadReceipts();
 }
 
 function updateSaveBar() {
