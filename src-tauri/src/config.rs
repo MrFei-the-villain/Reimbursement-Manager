@@ -204,8 +204,8 @@ const CLOUD_KEYS: [&str; 6] = [
 ];
 
 /// Persist a UI settings patch to config.json (same key restrictions as the
-/// Python `POST /api/config`: only default_currency, reimbursement_url and
-/// the cloud_ocr block are writable).
+/// Python `POST /api/config`: default_currency, reimbursement_url, excel_path
+/// and the cloud_ocr block are writable).
 pub fn apply_ui_patch(base: &Path, patch: &Value) -> Result<(), String> {
     let path = base.join(CONFIG_FILE);
     let mut disk: Value = if let Ok(text) = std::fs::read_to_string(&path) {
@@ -219,6 +219,11 @@ pub fn apply_ui_patch(base: &Path, patch: &Value) -> Result<(), String> {
     }
     if let Some(v) = patch.get("reimbursement_url") {
         disk["reimbursement_url"] = v.clone();
+    }
+    if let Some(v) = patch.get("excel_path") {
+        if let Some(s) = v.as_str().map(str::trim).filter(|s| !s.is_empty()) {
+            disk["excel_path"] = json!(s);
+        }
     }
     if let Some(cloud_patch) = patch.get("cloud_ocr").filter(|v| v.is_object()) {
         for key in CLOUD_KEYS {
