@@ -381,6 +381,7 @@ async function loadSettings() {
     const body = await invoke("get_config");
     document.getElementById("set-currency").value = body.default_currency || "CNY";
     document.getElementById("set-portal").value = body.reimbursement_url || "";
+    document.getElementById("set-excel-path").value = body.excel_path || "";
     const c = body.cloud_ocr || {};
     document.getElementById("set-cloud-enabled").checked = !!c.enabled;
     document.getElementById("set-cloud-fallback").checked = c.fallback_on_low_confidence !== false;
@@ -397,6 +398,7 @@ async function saveSettings(e) {
   const payload = {
     default_currency: document.getElementById("set-currency").value,
     reimbursement_url: document.getElementById("set-portal").value.trim(),
+    excel_path: document.getElementById("set-excel-path").value.trim(),
     cloud_ocr: {
       enabled: document.getElementById("set-cloud-enabled").checked,
       fallback_on_low_confidence: document.getElementById("set-cloud-fallback").checked,
@@ -435,6 +437,14 @@ async function init() {
   setupDropzone();
   document.getElementById("save-changes").addEventListener("click", saveChanges);
   document.getElementById("open-portal").addEventListener("click", openPortal);
+  document.getElementById("browse-excel").addEventListener("click", async () => {
+    try {
+      const picked = await invoke("choose_excel_location");
+      if (picked) document.getElementById("set-excel-path").value = picked;
+    } catch (e) {
+      console.error("file dialog failed:", e);
+    }
+  });
   document.getElementById("settings-form").addEventListener("submit", saveSettings);
 
   await loadReceipts();
