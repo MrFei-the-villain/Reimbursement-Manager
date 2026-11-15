@@ -27,12 +27,13 @@ use crate::config::Config;
 use crate::ocr::LocalOcrEngine;
 use crate::pipeline::is_image;
 use crate::store::{ExcelStore, StoreError};
-use crate::watcher::{ActivityLog, WatcherService};
+use crate::watcher::{ActivityLog, StoreSlot, WatcherService};
 
 pub struct AppState {
     pub base_dir: PathBuf,
     pub cfg: Arc<RwLock<Config>>,
-    pub store: Arc<ExcelStore>,
+    /// Swappable Excel store — Settings can point it at another file live.
+    pub store: StoreSlot,
     pub local: Arc<RwLock<Option<Arc<LocalOcrEngine>>>>,
     pub cloud: Arc<RwLock<Option<CloudVisionEngine>>>,
     pub watcher: Mutex<Option<WatcherService>>,
@@ -41,6 +42,10 @@ pub struct AppState {
 }
 
 impl AppState {
+    fn store(&self) -> Arc<ExcelStore> {
+        self.store.read().unwrap().clone()
+    }
+
     fn watcher_running(&self) -> bool {
         self.watcher
             .lock()
@@ -60,7 +65,7 @@ fn count_files(dir: &std::path::Path) -> usize {
 #[tauri::command]
 fn get_receipts(state: tauri::State<AppState>) -> Value {
     let receipts: Vec<Value> = state
-        .store
+        .store()
         .list_rows()
         .into_iter()
         .map(|(row, r)| {
@@ -99,6 +104,32 @@ fn get_config(state: tauri::State<AppState>) -> Value {
 
 #[tauri::command]
 fn set_config(state: tauri::State<AppState>, patch: Value) -> Result<Value, String> {
+    // Excel path first: validate + build the new store before anything is
+    // persisted, so a bad path never breaks the current one.
+    let mut excel_changed: Option<PathBuf> = None;
+    if let Some(new_path) = patch
+        .get("excel_path")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+    {
+        let pb = PathBuf::from(new_path);
+        if pb != state.cfg.read().unwrap().excel_path {
+            if pb.extension().map(|e| !e.eq_ignore_ascii_case("xlsx")) != Some(false) {
+                return Err("the Excel file must be a .xlsx workbook".into());
+            }
+            if let Some(parent) = pb.parent() {
+                if !parent.as_os_str().is_empty() && !parent.exists() {
+                    return Err(format!("folder '{}' does not exist", parent.display()));
+                }
+            }
+            let store = ExcelStore::new(pb.clone())
+                .map_err(|e| format!("cannot use '{}': {e}", pb.display()))?;
+            *state.store.write().unwrap() = Arc::new(store);
+            excel_changed = Some(pb);
+        }
+    }
+
     config::apply_ui_patch(&state.base_dir, &patch)?;
 
     // Reload in-memory config and swap the cloud engine
@@ -107,11 +138,29 @@ fn set_config(state: tauri::State<AppState>, patch: Value) -> Result<Value, Stri
     let engine = new_cfg.cloud.clone().map(CloudVisionEngine::new);
     *state.cfg.write().unwrap() = new_cfg;
     *state.cloud.write().unwrap() = engine;
-    state.activity.info(&format!(
-        "Config updated (cloud OCR {})",
-        if cloud_enabled { "enabled" } else { "disabled" }
-    ));
+    if let Some(pb) = excel_changed {
+        state.activity.info(&format!("Excel file switched to {}", pb.display()));
+    } else {
+        state.activity.info(&format!(
+            "Config updated (cloud OCR {})",
+            if cloud_enabled { "enabled" } else { "disabled" }
+        ));
+    }
     Ok(json!({ "ok": true, "cloud_enabled": cloud_enabled }))
+}
+
+/// Native "save workbook" dialog for picking the receipts.xlsx location.
+#[tauri::command]
+fn choose_excel_location(app: tauri::AppHandle) -> Option<String> {
+    use tauri_plugin_dialog::DialogExt;
+    let file = app
+        .dialog()
+        .file()
+        .add_filter("Excel workbook", &["xlsx"])
+        .set_file_name("receipts.xlsx")
+        .blocking_pick_file();
+    file.and_then(|f| f.into_path().ok())
+        .map(|p| p.display().to_string())
 }
 
 fn unique_inbox_dest(cfg: &Config, filename: &str) -> PathBuf {
@@ -194,7 +243,7 @@ fn upload_image(
 #[tauri::command]
 fn edit_receipt(state: tauri::State<AppState>, row: u32, patch: Value) -> Result<(), String> {
     let current = state
-        .store
+        .store()
         .list_rows()
         .into_iter()
         .find(|(r, _)| *r == row)
@@ -229,7 +278,7 @@ fn edit_receipt(state: tauri::State<AppState>, row: u32, patch: Value) -> Result
         needs_review: false, // manually reviewed via the GUI
         engine: current.engine,
     };
-    state.store.update_row(row, updated).map_err(|e| match e {
+    state.store().update_row(row, updated).map_err(|e| match e {
         StoreError::FileLocked(_) => {
             "receipts.xlsx is open in Excel — close it and retry".to_string()
         }
@@ -239,7 +288,7 @@ fn edit_receipt(state: tauri::State<AppState>, row: u32, patch: Value) -> Result
 
 #[tauri::command]
 fn delete_receipt(state: tauri::State<AppState>, row: u32) -> Result<(), String> {
-    state.store.delete_row(row).map_err(|e| match e {
+    state.store().delete_row(row).map_err(|e| match e {
         StoreError::FileLocked(_) => {
             "receipts.xlsx is open in Excel — close it and retry".to_string()
         }
@@ -330,6 +379,7 @@ pub fn run() {
             get_status,
             get_config,
             set_config,
+            choose_excel_location,
             add_path,
             upload_image,
             edit_receipt,
@@ -343,9 +393,11 @@ pub fn run() {
         .setup(|app| {
             let base_dir = config::data_dir();
             let cfg = Arc::new(RwLock::new(config::load_config(&base_dir)));
-            let store = Arc::new(ExcelStore::new(cfg.read().unwrap().excel_path.clone()).map_err(
-                |e| -> Box<dyn std::error::Error> { e.to_string().into() },
-            )?);
+            let store: StoreSlot = Arc::new(RwLock::new(Arc::new(
+                ExcelStore::new(cfg.read().unwrap().excel_path.clone()).map_err(
+                    |e| -> Box<dyn std::error::Error> { e.to_string().into() },
+                )?,
+            )));
             let cloud = Arc::new(RwLock::new(
                 cfg.read().unwrap().cloud.clone().map(CloudVisionEngine::new),
             ));
