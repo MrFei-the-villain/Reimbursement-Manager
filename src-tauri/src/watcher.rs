@@ -72,6 +72,8 @@ impl Default for ActivityLog {
 
 type PendingList = Arc<Mutex<Vec<(ReceiptData, PathBuf)>>>;
 type CloudSlot = Arc<RwLock<Option<CloudVisionEngine>>>;
+/// The Excel store lives behind a lock so Settings can switch the file at runtime.
+pub type StoreSlot = Arc<RwLock<Arc<ExcelStore>>>;
 
 pub struct WatcherService {
     pub queue_tx: Sender<PathBuf>,
@@ -86,7 +88,7 @@ impl WatcherService {
     #[allow(clippy::too_many_arguments)]
     pub fn start(
         cfg: Arc<RwLock<Config>>,
-        store: Arc<ExcelStore>,
+        store: StoreSlot,
         local: Arc<LocalOcrEngine>,
         cloud: CloudSlot,
         activity: ActivityLog,
@@ -215,7 +217,7 @@ fn worker_loop(
     rx: Receiver<PathBuf>,
     _watcher: notify::RecommendedWatcher,
     cfg: Arc<RwLock<Config>>,
-    store: Arc<ExcelStore>,
+    store_slot: StoreSlot,
     local: Arc<LocalOcrEngine>,
     cloud: CloudSlot,
     pending: PendingList,
@@ -224,6 +226,8 @@ fn worker_loop(
 ) {
     let mut last_retry = Instant::now() - Duration::from_secs(60);
     while !stop.load(Ordering::Relaxed) {
+        // Snapshot the current store so Settings can swap the Excel file live.
+        let store = store_slot.read().unwrap().clone();
         match rx.recv_timeout(Duration::from_secs(1)) {
             Ok(path) => {
                 if !path.exists() {
