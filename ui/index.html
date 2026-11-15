@@ -95,6 +95,14 @@
             <input type="text" id="set-portal" placeholder="https://expense.company.com" />
             <p class="hint">Opened by the "Reimbursement site" button on the Receipts tab.</p>
           </div>
+          <div class="field">
+            <label>Excel file location</label>
+            <div class="path-row">
+              <input type="text" id="set-excel-path" placeholder="receipts.xlsx" />
+              <button type="button" id="browse-excel">Browse…</button>
+            </div>
+            <p class="hint">Where receipts.xlsx lives. A new file is created if it doesn't exist; the app switches to it as soon as you save.</p>
+          </div>
         </div>
         <div class="card">
           <h3>Cloud OCR (AI vision fallback)</h3>
